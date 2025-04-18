@@ -21,5 +21,6 @@
 
 void initTCPServer();
 void handleTCPClient();
+void sendPong();
 
 #endif

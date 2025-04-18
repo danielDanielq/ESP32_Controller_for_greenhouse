@@ -22,6 +22,7 @@
 WiFiServer tcpServer(DEBUG_HOST_PORT);
 WiFiClient client;
 
+
 void initTCPServer() {
   WiFi.softAP(DEBUG_WIFI_SSID, DEBUG_WIFI_PASSWORD);
   tcpServer.begin();
@@ -121,4 +122,13 @@ void handleTCPClient() {
   // #if ENABLE_SERIAL_PRINT == 1
   //   Serial.println("Client disconnected");
   // #endif
+}
+
+void sendPong() {
+  unsigned long lastPing = 0;
+
+  if (millis() - lastPing > 3000) {
+    client.print("PONG\n");
+    lastPing = millis();
+  }
 }

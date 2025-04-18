@@ -19,6 +19,8 @@
 //192.168.46.185
 #define DEBUG_WIFI_SSID "Off Limits4"
 #define DEBUG_WIFI_PASSWORD "J7s2tzvzKzva"
+//#define DEBUG_WIFI_SSID "luci_D77F"
+//#define DEBUG_WIFI_PASSWORD "53267412"
 #define DEBUG_HOST_PORT 6789
 
 #endif
