@@ -22,6 +22,7 @@
 WiFiServer tcpServer(DEBUG_HOST_PORT);
 WiFiClient client;
 
+extern String getSensorData();
 
 void initTCPServer() {
   WiFi.softAP(DEBUG_WIFI_SSID, DEBUG_WIFI_PASSWORD);
@@ -38,7 +39,7 @@ void handleTCPClient() {
     client = tcpServer.available();
     return;
   }
-
+  
   
   if (client && client.connected()) {
     if (client.available()) {
@@ -53,13 +54,32 @@ void handleTCPClient() {
         client.println("Am primit: " + mesaj);
       #endif
 
-      if (mesaj == "ON1") {
-        startRelay(1);
+      int separatorIndex = mesaj.indexOf(':');
+      if (separatorIndex != -1) {
+        String comanda = mesaj.substring(0, separatorIndex);
+        String valoareStr = mesaj.substring(separatorIndex + 1);
+        litri = valoareStr.toInt();  // conversie text în int
 
+        if (comanda == "ON1") {
+          startRelay(1);
+          // TODO: Folosește `litri` pentru a controla durata irigării
+          // De exemplu: calculează timpul necesar bazat pe debitul senzorului
+          #if ENABLE_SERIAL_PRINT == 1
+            client.println("RELAY1 ON - " + String(litri) + " litri");
+            Serial.println("Irigare cu " + String(litri) + " litri pe ON1");
+          #endif
+        }
+
+        // Poți extinde și pentru ON2, ON3 etc., la fel
+      }
+
+
+      if (mesaj == "SEND DATA") {
+        String data = getSensorData();
+        client.println(data); // Trimite datele către client
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY1 ON");
+          Serial.println("Date trimise: " + data);
         #endif
-
       } else if (mesaj == "OFF1") {
         stopRelay(1);
 
