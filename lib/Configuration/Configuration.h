@@ -21,5 +21,6 @@ extern int litri;
 #define ENABLE_SERIAL_PRINT_DS18B20 1
 #define ENABLE_SERIAL_PRINT_YFdn40 0
 #define ENABLE_SERIAL_PRINT_SOIL 0
+#define ENABLE_SERIAL_PRINT_SHT31 1
 
 #endif

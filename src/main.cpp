@@ -22,12 +22,17 @@
 #include "WifiConnection.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include "Adafruit_SHT31.h"
 
 // DS18B20 senzori:
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 // Array pentru a stoca adresele senzorilor
 DeviceAddress sensor1, sensor2;
+
+// === SHT31 ===
+Adafruit_SHT31 sht31 = Adafruit_SHT31();
+
 
 void updateFlowRate();
 int readSoilMoistureAvg();
@@ -51,6 +56,8 @@ const int WET_VALUE = 1200;
 int litri = 0;
 float temperatura1 = 0.0;
 float temperatura2 = 0.0;
+float tempSHT = 0.0f;
+float humSHT = 0.0f;
 int umiditateSol = 0;
 
 
@@ -65,10 +72,19 @@ int umiditateSol = 0;
 #endif
 
 void updateFlowRate() {
+  int pulses;
   unsigned long currentMillis = millis();
+  if (currentMillis < lastFlowTime) {
+    // Overflow millis
+    lastFlowTime = currentMillis;
+    noInterrupts();
+    flowPulseCount = 0;
+    interrupts();
+  }
+  
   if (currentMillis - lastFlowTime >= 1000) {
     noInterrupts();
-    int pulses = flowPulseCount;
+    pulses = flowPulseCount;
     flowPulseCount = 0;
     interrupts();
 
@@ -91,6 +107,8 @@ int readSoilMoistureAvg() {
 String getSensorData() {
   return String(temperatura1, 1) + "," +
          String(temperatura2, 1) + "," +
+         String(tempSHT, 1) + "," +
+         String(humSHT, 1) + "," +
          String(flowRateLMin, 1) + "," +
          String(umiditateSol);
 }
@@ -99,6 +117,10 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   sensors.begin();
+
+  if (!sht31.begin(0x44)) {
+    Serial.println("SHT31 nu a fost detectat!");
+  }
 
   #if ENABLE_SERIAL_PRINT_DS18B20 == 1
     Serial.println("Caut senzori DS18B20...");
@@ -142,9 +164,24 @@ void setup() {
 }
 
 void loop() {
+
   handleTCPClient();
 
 
+  // Senzor SHT31
+  tempSHT = sht31.readTemperature();
+  humSHT = sht31.readHumidity();
+  
+  #if ENABLE_SERIAL_PRINT_SHT31 == 1
+    Serial.print("SHT31 - Temp: ");
+    Serial.print(tempSHT);
+    Serial.print("°C | Umiditate: ");
+    Serial.print(humSHT);
+    Serial.println("%");
+  #endif
+  
+
+  // Umiditate sol
   int soilRaw = readSoilMoistureAvg();
   umiditateSol = map(soilRaw, DRY_VALUE, WET_VALUE, 0, 100);
   umiditateSol = constrain(umiditateSol, 0, 100);
@@ -158,6 +195,7 @@ void loop() {
   #endif
 
 
+  // Senzori DS18B20
   sensors.requestTemperatures();  // Trimite comanda de citire
 
   temperatura1 = sensors.getTempC(sensor1);
@@ -177,6 +215,7 @@ void loop() {
   #endif
 
 
+  // Debimetru
   updateFlowRate(); //se aplica din secunda in secunda
 
   #if ENABLE_SERIAL_PRINT_YFdn40 == 1
