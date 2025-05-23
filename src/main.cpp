@@ -155,6 +155,7 @@ void setup() {
 
   // Debimetru
   pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP);  // cu pullup intern
+  
   attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), pulseCounter, FALLING);
 
 

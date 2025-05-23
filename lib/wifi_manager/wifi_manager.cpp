@@ -30,12 +30,6 @@ void connectToWiFi(const char* ssid, const char* password) {
       Serial.print(".");
     #endif
   }
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    #if ENABLE_SERIAL_PRINT == 1
-      Serial.print(".");
-    #endif
-  }
   
   #if ENABLE_SERIAL_PRINT == 1
     Serial.println("\nConectat la WiFi!");
