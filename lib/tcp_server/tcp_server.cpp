@@ -70,7 +70,7 @@ void handleTCPClient() {
           #endif
         }
 
-        // Poți extinde și pentru ON2, ON3 etc., la fel
+        // Putem extinde și pentru ON2, ON3 etc., la fel
       }
 
 

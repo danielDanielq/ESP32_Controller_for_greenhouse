@@ -16,11 +16,13 @@ extern int litri;
 
 #define SOIL_MOISTURE_PIN 39 // soil moisture sensor
 
+#define TEMT6000_PIN 34 // TEMT6000 light sensor
 
 #define ENABLE_SERIAL_PRINT 1
 #define ENABLE_SERIAL_PRINT_DS18B20 1
 #define ENABLE_SERIAL_PRINT_YFdn40 1
 #define ENABLE_SERIAL_PRINT_SOIL 1
 #define ENABLE_SERIAL_PRINT_SHT31 1
+#define ENABLE_SERIAL_PRINT_TEMT6000 1
 
 #endif

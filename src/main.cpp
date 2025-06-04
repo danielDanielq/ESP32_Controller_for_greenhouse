@@ -33,10 +33,11 @@ DeviceAddress sensor1, sensor2;
 // === SHT31 ===
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
-
 void updateFlowRate();
 int readSoilMoistureAvg();
 String getSensorData();
+int readLightSensor();
+
 
 // Debit senzor:
 volatile int flowPulseCount = 0;
@@ -46,7 +47,6 @@ float flowRateLMin = 0.0;
 void IRAM_ATTR pulseCounter() {
   flowPulseCount++;
 }
-
 
 // soil moisture sensor
 const int DRY_VALUE = 3200;
@@ -59,6 +59,7 @@ float temperatura2 = 0.0;
 float tempSHT = 0.0f;
 float humSHT = 0.0f;
 int umiditateSol = 0;
+float luminaLux = 0.0f;
 
 
 #if ENABLE_SERIAL_PRINT_DS18B20 == 1
@@ -94,6 +95,7 @@ void updateFlowRate() {
   }
 }
 
+
 // === Functii ===
 int readSoilMoistureAvg() {
   int suma = 0;
@@ -104,14 +106,32 @@ int readSoilMoistureAvg() {
   return suma / 10;
 }
 
+int readLightSensor() {
+  int lumina_raw = analogRead(TEMT6000_PIN);
+  // Convertire în procentaj
+  float procent = (lumina_raw / 4095.0) * 100.0;
+  float tensiune = (lumina_raw / 4095.0) * 3.3;
+  float lux = tensiune / 3.3 * 50000.0; // Estimare lux (50000 lux la 3.3V)
+  
+  #if ENABLE_SERIAL_PRINT == 1
+    Serial.print("Lumina RAW: "); Serial.print(lumina_raw);
+    Serial.print(" | %: "); Serial.print(procent, 1);
+    Serial.print(" | Lux estimat: "); Serial.println(lux, 1);
+  #endif
+  
+  return static_cast<int>(lux);
+}
+
 String getSensorData() {
   return String(temperatura1, 1) + "," +
          String(temperatura2, 1) + "," +
          String(tempSHT, 1) + "," +
          String(humSHT, 1) + "," +
          String(flowRateLMin, 1) + "," +
-         String(umiditateSol);
+         String(umiditateSol) + "," +
+         String(luminaLux, 0);
 }
+
 
 void setup() {
   Serial.begin(115200);
@@ -164,10 +184,10 @@ void setup() {
   initTCPServer();
 }
 
+
 void loop() {
 
   handleTCPClient();
-
 
   // Senzor SHT31
   tempSHT = sht31.readTemperature();
@@ -180,7 +200,6 @@ void loop() {
     Serial.print(humSHT);
     Serial.println("%");
   #endif
-  
 
   // Umiditate sol
   int soilRaw = readSoilMoistureAvg();
@@ -215,6 +234,12 @@ void loop() {
     delay(500);
   #endif
 
+  // Senzor de lumina TEMT6000
+  luminaLux = readLightSensor();
+  #if ENABLE_SERIAL_PRINT_TEMT6000 == 1
+    Serial.print("Lumina (Lux): ");
+    Serial.println(luminaLux);
+  #endif
 
   // Debimetru
   updateFlowRate(); //se aplica din secunda in secunda
@@ -228,6 +253,5 @@ void loop() {
     Serial.println(" L/min");
     delay(500);
   #endif
-
   
 }
