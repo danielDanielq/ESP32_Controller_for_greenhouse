@@ -55,26 +55,26 @@ void loop() {
     switch (comanda) {
       case '1':
         Serial.println("Motor 1: STANGA");
-        analogWrite(RPWM1, 255);
+        analogWrite(RPWM1, 200);
         analogWrite(LPWM1, 0);
         break;
 
       case '2':
         Serial.println("Motor 1: DREAPTA");
         analogWrite(RPWM1, 0);
-        analogWrite(LPWM1, 255);
+        analogWrite(LPWM1, 200);
         break;
 
       case '3':
         Serial.println("Motor 2: STANGA");
-        analogWrite(RPWM2, 255);
+        analogWrite(RPWM2, 200);
         analogWrite(LPWM2, 0);
         break;
 
       case '4':
         Serial.println("Motor 2: DREAPTA");
         analogWrite(RPWM2, 0);
-        analogWrite(LPWM2, 255);
+        analogWrite(LPWM2, 200);
         break;
 
       default:
