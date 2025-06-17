@@ -5,7 +5,7 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin();
+  Wire.begin(21, 22); // SDA, SCL pins for ESP32
   
   if (!sht31.begin(0x44)) { // 0x45 e adresa alternativă
     Serial.println("SHT31 not found!");

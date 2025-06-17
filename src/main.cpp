@@ -35,8 +35,8 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 void updateFlowRate();
 int readSoilMoistureAvg();
-String getSensorData();
 int readLightSensor();
+String getSensorData();
 
 
 // Debit senzor:
@@ -72,6 +72,8 @@ float luminaLux = 0.0f;
   }
 #endif
 
+
+// === Functii ===
 void updateFlowRate() {
   int pulses;
   unsigned long currentMillis = millis();
@@ -96,7 +98,6 @@ void updateFlowRate() {
 }
 
 
-// === Functii ===
 int readSoilMoistureAvg() {
   int suma = 0;
   for (int i = 0; i < 10; i++) {
@@ -131,6 +132,7 @@ String getSensorData() {
          String(umiditateSol) + "," +
          String(luminaLux, 0);
 }
+
 
 
 void setup() {

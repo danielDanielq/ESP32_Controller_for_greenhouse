@@ -1,10 +1,11 @@
 #include <Arduino.h>
 
 // === Limitatoare ===
-#define LIMITATOR_SUS1 18
-#define LIMITATOR_JOS1 23
-#define LIMITATOR_SUS2 17
-#define LIMITATOR_JOS2 25
+#define LIMITATOR_SUS1 18 // l1
+#define LIMITATOR_JOS1 25 // l2
+#define LIMITATOR_SUS2 17 // l3
+#define LIMITATOR_JOS2 23 // l4
+
 
 // === Motoare ===
 #define RPWM1 4
