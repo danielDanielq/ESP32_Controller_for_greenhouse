@@ -24,6 +24,12 @@ WiFiClient client;
 
 extern String getSensorData();
 
+extern bool macara1Active;
+extern unsigned long macara1StartTime;
+
+extern bool macara2Active;
+extern unsigned long macara2StartTime;
+
 void initTCPServer() {
   WiFi.softAP(DEBUG_WIFI_SSID, DEBUG_WIFI_PASSWORD);
   tcpServer.begin();
@@ -88,45 +94,57 @@ void handleTCPClient() {
         #endif
 
       } else if (mesaj == "ON2") {
-        startRelay(2);
+        analogWrite(RPWM1, 0);
+        analogWrite(LPWM1, 200);
+        macara1Active = true;
+        macara1StartTime = millis();
 
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY2 ON");
+          client.println("MACARA 1 DESCHIDERE");
         #endif
 
       } else if (mesaj == "OFF2") {
-        stopRelay(2);
+        analogWrite(RPWM1, 200);
+        analogWrite(LPWM1, 0);
+        macara1Active = true;
+        macara1StartTime = millis();
 
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY2 OFF");
+          client.println("MACARA 1 INCHIDERE");
         #endif
 
       } else if (mesaj == "ON3") {
-        startRelay(3);
+        analogWrite(RPWM2, 200);
+        analogWrite(LPWM2, 0);
+        macara2Active = true;
+        macara2StartTime = millis();
 
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY3 ON");
+          client.println("MACARA 2 DESCHIDERE");
         #endif
 
       } else if (mesaj == "OFF3") {
-        stopRelay(3);
-        
+        analogWrite(RPWM2, 0);
+        analogWrite(LPWM2, 200);
+        macara2Active = true;
+        macara2StartTime = millis();
+
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY3 OFF");
+          client.println("MACARA 2 INCHIDERE");
         #endif
 
       } else if (mesaj == "ON4") {
         startRelay(4);
 
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY4 ON");
+          client.println("VENTILATOARE ON");
         #endif
 
       } else if (mesaj == "OFF4") {
         stopRelay(4);
 
         #if ENABLE_SERIAL_PRINT == 1
-          client.println("RELAY4 OFF");
+          client.println("VENTILATOARE OFF");
         #endif
 
       } else {

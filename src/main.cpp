@@ -61,6 +61,11 @@ float humSHT = 0.0f;
 int umiditateSol = 0;
 float luminaLux = 0.0f;
 
+bool macara1Active = false;
+unsigned long macara1StartTime = 0;
+bool macara2Active = false;
+unsigned long macara2StartTime = 0;
+
 
 #if ENABLE_SERIAL_PRINT_DS18B20 == 1
   void printAddress(DeviceAddress deviceAddress) {
@@ -138,6 +143,19 @@ String getSensorData() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
+
+  // Drivere
+  pinMode(RPWM1, OUTPUT);
+  pinMode(LPWM1, OUTPUT);
+  pinMode(RPWM2, OUTPUT);
+  pinMode(LPWM2, OUTPUT);
+
+  // Limitatoare
+  pinMode(LIMITATOR_SUS1, INPUT_PULLUP);
+  pinMode(LIMITATOR_JOS1, INPUT_PULLUP);
+  pinMode(LIMITATOR_SUS2, INPUT_PULLUP);
+  pinMode(LIMITATOR_JOS2, INPUT_PULLUP);
+
   sensors.begin();
 
   if (!sht31.begin(0x44)) {
@@ -256,4 +274,46 @@ void loop() {
     delay(500);
   #endif
   
+  // Verificare limitatoare pentru macarale
+  if(macara1Active) {
+    if (digitalRead(LIMITATOR_SUS1) == LOW || digitalRead(LIMITATOR_JOS1) == LOW) {
+      analogWrite(RPWM1, 0);
+      analogWrite(LPWM1, 0);
+      macara1Active = false; // Oprire macara 1 automat
+      #if ENABLE_SERIAL_PRINT_MACARA == 1
+        Serial.println("Macara 1 oprit automat - limitator activ.");
+      #endif
+    } 
+    // Timeout de siguranță
+    else if (millis() - macara1StartTime > 15000){
+      analogWrite(RPWM1, 0);
+      analogWrite(LPWM1, 0);
+      macara1Active = false;
+      #if ENABLE_SERIAL_PRINT_MACARA == 1
+        Serial.println("Macara 1 oprită - timeout 15 secunde!");
+      #endif
+    }
+  }
+
+  if (macara2Active) {
+    if (digitalRead(LIMITATOR_SUS2) == LOW || digitalRead(LIMITATOR_JOS2) == LOW) {
+      analogWrite(RPWM2, 0);
+      analogWrite(LPWM2, 0);
+      macara2Active = false;
+      #if ENABLE_SERIAL_PRINT_MACARA == 1
+        Serial.println("Macara 2 oprit automat - limitator activ.");
+      #endif
+    }
+    // Timeout de siguranță
+    else if (millis() - macara2StartTime > 15000) {
+      analogWrite(RPWM2, 0);
+      analogWrite(LPWM2, 0);
+      macara2Active = false;
+      #if ENABLE_SERIAL_PRINT_MACARA == 1
+        Serial.println("Macara 2 oprită - timeout 15 secunde!");
+      #endif
+    }
+  }
+  
+
 }

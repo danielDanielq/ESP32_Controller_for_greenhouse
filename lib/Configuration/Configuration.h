@@ -10,6 +10,18 @@
 #define RELAY_3 14 // -> A3 -> in3 =right crane
 #define RELAY_4 27 // -> A4 -> in4 =ventilation
 
+// Drivere
+#define RPWM1 4
+#define LPWM1 5
+#define RPWM2 16
+#define LPWM2 19
+
+// Limitatoare
+#define LIMITATOR_SUS1 18
+#define LIMITATOR_JOS1 25
+#define LIMITATOR_SUS2 17
+#define LIMITATOR_JOS2 23
+
 #define ONE_WIRE_BUS 32 // x2 DS18B20
 
 #define FLOW_SENSOR_PIN 33 // flow sensor
@@ -25,5 +37,6 @@ extern int litri;
 #define ENABLE_SERIAL_PRINT_SOIL 1
 #define ENABLE_SERIAL_PRINT_SHT31 1
 #define ENABLE_SERIAL_PRINT_TEMT6000 1
+#define ENABLE_SERIAL_PRINT_MACARA 1
 
 #endif
