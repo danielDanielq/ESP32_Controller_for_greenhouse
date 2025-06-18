@@ -30,6 +30,11 @@ extern unsigned long macara1StartTime;
 extern bool macara2Active;
 extern unsigned long macara2StartTime;
 
+extern float litriConsumati;
+extern float litriSetati;
+
+extern bool irigareInDesfasurare;
+
 void initTCPServer() {
   WiFi.softAP(DEBUG_WIFI_SSID, DEBUG_WIFI_PASSWORD);
   tcpServer.begin();
@@ -64,15 +69,16 @@ void handleTCPClient() {
       if (separatorIndex != -1) {
         String comanda = mesaj.substring(0, separatorIndex);
         String valoareStr = mesaj.substring(separatorIndex + 1);
-        litri = valoareStr.toInt();  // conversie text în int
+        litriSetati = valoareStr.toFloat();  // conversie text în float
 
         if (comanda == "ON1") {
           startRelay(1);
-          // TODO: Folosește `litri` pentru a controla durata irigării
-          // De exemplu: calculează timpul necesar bazat pe debitul senzorului
+          litriConsumati = 0.0;
+          irigareInDesfasurare = true;
+
           #if ENABLE_SERIAL_PRINT == 1
-            client.println("RELAY1 ON - " + String(litri) + " litri");
-            Serial.println("Irigare cu " + String(litri) + " litri pe ON1");
+            client.println("RELAY1 ON - " + String(litriSetati) + " litri");
+            Serial.println("Irigare cu " + String(litriSetati) + " litri pe ON1");
           #endif
         }
 
@@ -147,7 +153,18 @@ void handleTCPClient() {
           client.println("VENTILATOARE OFF");
         #endif
 
-      } else {
+      } else if (mesaj == "RESET_LITRI"){
+        litriConsumati = 0.0;
+        
+        #if ENABLE_SERIAL_PRINT == 1
+          client.println("LITRI_RESETAȚI");
+          Serial.println("Litri consumați resetați la 0");
+        #endif
+      }
+      
+      
+      
+      else {
 
         #if ENABLE_SERIAL_PRINT == 1
           client.println("Comandă necunoscută");

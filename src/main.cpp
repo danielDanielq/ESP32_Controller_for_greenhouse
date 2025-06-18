@@ -37,6 +37,7 @@ void updateFlowRate();
 int readSoilMoistureAvg();
 int readLightSensor();
 String getSensorData();
+void verificaIrigare();
 
 
 // Debit senzor:
@@ -53,13 +54,16 @@ const int DRY_VALUE = 3200;
 const int WET_VALUE = 1200;
 
 
-int litri = 0;
+float litriSetati = 0.0;
 float temperatura1 = 0.0;
 float temperatura2 = 0.0;
 float tempSHT = 0.0f;
 float humSHT = 0.0f;
 int umiditateSol = 0;
 float luminaLux = 0.0f;
+float litriConsumati = 0.0;
+
+bool irigareInDesfasurare = false;
 
 bool macara1Active = false;
 unsigned long macara1StartTime = 0;
@@ -98,6 +102,10 @@ void updateFlowRate() {
 
     // YF-DN40: ~450 pulses per liter
     flowRateLMin = (pulses / 450.0) * 60.0;
+    float litriInSecunda = (pulses / 450.0); // litri/secundă (pulsuri pe 1 sec)
+
+    litriConsumati += litriInSecunda; // acumulează litri consumați
+
     lastFlowTime = currentMillis;
   }
 }
@@ -135,9 +143,23 @@ String getSensorData() {
          String(humSHT, 1) + "," +
          String(flowRateLMin, 1) + "," +
          String(umiditateSol) + "," +
-         String(luminaLux, 0);
+         String(luminaLux, 0)+ "," +
+        String(litriConsumati, 2);
 }
 
+void verificaIrigare() {
+  if (irigareInDesfasurare) {
+    if (litriConsumati >= litriSetati) {
+      stopRelay(1);
+      irigareInDesfasurare = false;
+
+      #if ENABLE_SERIAL_PRINT == 1
+        Serial.println("✅ Irigare oprită automat (litri atinsi)");
+      #endif
+      
+    }
+  }
+}
 
 
 void setup() {
@@ -208,6 +230,7 @@ void setup() {
 void loop() {
 
   handleTCPClient();
+  verificaIrigare();
 
   // Senzor SHT31
   tempSHT = sht31.readTemperature();
@@ -266,7 +289,7 @@ void loop() {
 
   #if ENABLE_SERIAL_PRINT_YFdn40 == 1
     Serial.print("litri: ");
-    Serial.print(litri);
+    Serial.print(litriSetati);
     Serial.println(" L");
     Serial.print("Debit: ");
     Serial.print(flowRateLMin);

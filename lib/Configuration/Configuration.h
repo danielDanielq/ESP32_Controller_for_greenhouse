@@ -25,7 +25,6 @@
 #define ONE_WIRE_BUS 32 // x2 DS18B20
 
 #define FLOW_SENSOR_PIN 33 // flow sensor
-extern int litri;
 
 #define SOIL_MOISTURE_PIN 39 // soil moisture sensor
 
