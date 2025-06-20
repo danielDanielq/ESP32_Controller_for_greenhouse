@@ -62,6 +62,10 @@ float humSHT = 0.0f;
 int umiditateSol = 0;
 float luminaLux = 0.0f;
 float litriConsumati = 0.0;
+float pragTempLaterale = 24.0;
+float pragTempVentil = 34.0; 
+float temperaturaMedie = 0.0f;
+bool modAuto = false; 
 
 bool irigareInDesfasurare = false;
 
@@ -70,6 +74,8 @@ unsigned long macara1StartTime = 0;
 bool macara2Active = false;
 unsigned long macara2StartTime = 0;
 
+bool macara1Blocata = false;
+bool macara2Blocata = false;
 
 #if ENABLE_SERIAL_PRINT_DS18B20 == 1
   void printAddress(DeviceAddress deviceAddress) {
@@ -144,7 +150,7 @@ String getSensorData() {
          String(flowRateLMin, 1) + "," +
          String(umiditateSol) + "," +
          String(luminaLux, 0)+ "," +
-        String(litriConsumati, 2);
+         String(litriConsumati, 2);
 }
 
 void verificaIrigare() {
@@ -288,7 +294,7 @@ void loop() {
   updateFlowRate(); //se aplica din secunda in secunda
 
   #if ENABLE_SERIAL_PRINT_YFdn40 == 1
-    Serial.print("litri: ");
+    Serial.print("litri setati: ");
     Serial.print(litriSetati);
     Serial.println(" L");
     Serial.print("Debit: ");
@@ -302,13 +308,16 @@ void loop() {
     if (digitalRead(LIMITATOR_SUS1) == LOW || digitalRead(LIMITATOR_JOS1) == LOW) {
       analogWrite(RPWM1, 0);
       analogWrite(LPWM1, 0);
+      digitalWrite(RPWM1, LOW);
+      digitalWrite(LPWM1, LOW);
       macara1Active = false; // Oprire macara 1 automat
+      macara1Blocata = true;
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 1 oprit automat - limitator activ.");
       #endif
     } 
     // Timeout de siguranță
-    else if (millis() - macara1StartTime > 15000){
+    else if (millis() - macara1StartTime > 55000){
       analogWrite(RPWM1, 0);
       analogWrite(LPWM1, 0);
       macara1Active = false;
@@ -323,12 +332,13 @@ void loop() {
       analogWrite(RPWM2, 0);
       analogWrite(LPWM2, 0);
       macara2Active = false;
+      macara2Blocata = true;
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 2 oprit automat - limitator activ.");
       #endif
     }
     // Timeout de siguranță
-    else if (millis() - macara2StartTime > 15000) {
+    else if (millis() - macara2StartTime > 55000) {
       analogWrite(RPWM2, 0);
       analogWrite(LPWM2, 0);
       macara2Active = false;
@@ -338,5 +348,46 @@ void loop() {
     }
   }
   
+  if (modAuto) {
+    if (!isnan(tempSHT) || !isnan(temperatura1) || !isnan(temperatura2)) {
+      temperaturaMedie = (temperatura1 + temperatura2 + tempSHT) / 3.0;
+    }
+
+    // CONTROL LATERALE - ambele macarale
+    if (temperaturaMedie >= pragTempLaterale) {
+      // Deschide Macara 1
+      if (!macara1Active && !macara1Blocata) {
+        analogWrite(RPWM1, 0);
+        analogWrite(LPWM1, 255);
+        macara1Active = true;
+        macara1StartTime = millis();
+        Serial.println("Auto: Macara 1 deschisa (temperatura mare)");
+      }
+
+      // Deschide Macara 2
+      if (!macara2Active && !macara2Blocata) {
+        analogWrite(RPWM2, 255);
+        analogWrite(LPWM2, 0);
+        macara2Active = true;
+        macara2StartTime = millis();
+        Serial.println("Auto: Macara 2 deschisa (temperatura mare)");
+      }
+    }
+
+    const float histerezisVentil = 1.0;
+
+    static bool ventilPorni = false;
+
+    // CONTROL VENTILATIE
+    if (temperaturaMedie >= pragTempVentil && !ventilPorni) {
+      startRelay(4);  // Ventilatoare ON
+      ventilPorni = true;
+      Serial.println("Auto: Ventilatoare activate");
+    } else if (temperaturaMedie <= (pragTempVentil - histerezisVentil) && ventilPorni) {
+      stopRelay(4);   // Ventilatoare OFF
+      ventilPorni = false;
+      Serial.println("Auto: Ventilatoare oprite");
+    }
+  }
 
 }

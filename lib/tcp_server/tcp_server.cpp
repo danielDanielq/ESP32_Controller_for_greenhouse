@@ -33,6 +33,10 @@ extern unsigned long macara2StartTime;
 extern float litriConsumati;
 extern float litriSetati;
 
+extern float pragTempLaterale;
+extern float pragTempVentil;
+extern bool modAuto;
+
 extern bool irigareInDesfasurare;
 
 void initTCPServer() {
@@ -69,9 +73,9 @@ void handleTCPClient() {
       if (separatorIndex != -1) {
         String comanda = mesaj.substring(0, separatorIndex);
         String valoareStr = mesaj.substring(separatorIndex + 1);
-        litriSetati = valoareStr.toFloat();  // conversie text în float
 
         if (comanda == "ON1") {
+          litriSetati = valoareStr.toFloat();  // conversie text în float
           startRelay(1);
           litriConsumati = 0.0;
           irigareInDesfasurare = true;
@@ -79,6 +83,26 @@ void handleTCPClient() {
           #if ENABLE_SERIAL_PRINT == 1
             client.println("RELAY1 ON - " + String(litriSetati) + " litri");
             Serial.println("Irigare cu " + String(litriSetati) + " litri pe ON1");
+          #endif
+          }else if (comanda == "AUTO") {
+          modAuto = (valoareStr.toInt() == 1);
+          #if ENABLE_SERIAL_PRINT == 1
+            client.println("MOD AUTO setat la: " + String(modAuto));
+            Serial.println("Mod auto setat la: " + String(modAuto));
+          #endif
+
+        } else if (comanda == "TEMP_LATERALE") {
+          pragTempLaterale = valoareStr.toFloat();
+          #if ENABLE_SERIAL_PRINT == 1
+            client.println("Prag TEMP_LATERALE: " + String(pragTempLaterale));
+            Serial.println("Prag temperatura laterală setat la: " + String(pragTempLaterale));
+          #endif
+
+        } else if (comanda == "TEMP_VENTIL") {
+          pragTempVentil = valoareStr.toFloat();
+          #if ENABLE_SERIAL_PRINT == 1
+            client.println("Prag TEMP_VENTIL: " + String(pragTempVentil));
+            Serial.println("Prag temperatura ventilator setat la: " + String(pragTempVentil));
           #endif
         }
 
@@ -101,7 +125,7 @@ void handleTCPClient() {
 
       } else if (mesaj == "ON2") {
         analogWrite(RPWM1, 0);
-        analogWrite(LPWM1, 200);
+        analogWrite(LPWM1, 255);
         macara1Active = true;
         macara1StartTime = millis();
 
@@ -110,7 +134,7 @@ void handleTCPClient() {
         #endif
 
       } else if (mesaj == "OFF2") {
-        analogWrite(RPWM1, 200);
+        analogWrite(RPWM1, 255);
         analogWrite(LPWM1, 0);
         macara1Active = true;
         macara1StartTime = millis();
@@ -120,7 +144,7 @@ void handleTCPClient() {
         #endif
 
       } else if (mesaj == "ON3") {
-        analogWrite(RPWM2, 200);
+        analogWrite(RPWM2, 255);
         analogWrite(LPWM2, 0);
         macara2Active = true;
         macara2StartTime = millis();
@@ -131,7 +155,7 @@ void handleTCPClient() {
 
       } else if (mesaj == "OFF3") {
         analogWrite(RPWM2, 0);
-        analogWrite(LPWM2, 200);
+        analogWrite(LPWM2, 255);
         macara2Active = true;
         macara2StartTime = millis();
 
