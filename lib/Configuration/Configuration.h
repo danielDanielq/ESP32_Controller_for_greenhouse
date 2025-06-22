@@ -38,4 +38,7 @@
 #define ENABLE_SERIAL_PRINT_TEMT6000 1
 #define ENABLE_SERIAL_PRINT_MACARA 1
 
+#define LUX_MAX 50000.0f // Lux max for TEMT6000 sensor
+#define SAFETY_TIMEOUT 55000 // Timeout for cranes in milliseconds
+
 #endif

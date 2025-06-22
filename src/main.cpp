@@ -35,7 +35,7 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 void updateFlowRate();
 int readSoilMoistureAvg();
-int readLightSensor();
+float readLightSensor();
 String getSensorData();
 void verificaIrigare();
 
@@ -62,8 +62,8 @@ float humSHT = 0.0f;
 int umiditateSol = 0;
 float luminaLux = 0.0f;
 float litriConsumati = 0.0;
-float pragTempLaterale = 24.0;
-float pragTempVentil = 34.0; 
+float pragTempLaterale = 0.0;
+float pragTempVentil = 0.0; 
 float temperaturaMedie = 0.0f;
 bool modAuto = false; 
 
@@ -74,8 +74,8 @@ unsigned long macara1StartTime = 0;
 bool macara2Active = false;
 unsigned long macara2StartTime = 0;
 
-bool macara1Blocata = false;
-bool macara2Blocata = false;
+const float histerezisVentil = 1.0;
+static bool ventilPorni = false;
 
 #if ENABLE_SERIAL_PRINT_DS18B20 == 1
   void printAddress(DeviceAddress deviceAddress) {
@@ -126,12 +126,12 @@ int readSoilMoistureAvg() {
   return suma / 10;
 }
 
-int readLightSensor() {
+float readLightSensor() {
   int lumina_raw = analogRead(TEMT6000_PIN);
   // Convertire în procentaj
   float procent = (lumina_raw / 4095.0) * 100.0;
   float tensiune = (lumina_raw / 4095.0) * 3.3;
-  float lux = tensiune / 3.3 * 50000.0; // Estimare lux (50000 lux la 3.3V)
+  float lux = tensiune / 3.3 * LUX_MAX; // Estimare lux (50000 lux la 3.3V)
   
   #if ENABLE_SERIAL_PRINT == 1
     Serial.print("Lumina RAW: "); Serial.print(lumina_raw);
@@ -165,6 +165,34 @@ void verificaIrigare() {
       
     }
   }
+}
+
+void deschideMacara1() {
+  analogWrite(RPWM1, 0);
+  analogWrite(LPWM1, 255);
+  macara1Active = true;
+  macara1StartTime = millis();
+}
+
+void inchideMacara1() {
+  analogWrite(RPWM1, 255);
+  analogWrite(LPWM1, 0);
+  macara1Active = true;
+  macara1StartTime = millis();
+}
+
+void deschideMacara2() {
+  analogWrite(RPWM2, 255);
+  analogWrite(LPWM2, 0);
+  macara2Active = true;
+  macara2StartTime = millis();
+}
+
+void inchideMacara2() {
+  analogWrite(RPWM2, 0);
+  analogWrite(LPWM2, 255);
+  macara2Active = true;
+  macara2StartTime = millis();
 }
 
 
@@ -290,6 +318,39 @@ void loop() {
     Serial.println(luminaLux);
   #endif
 
+  // MOD AUTOMAT
+  if (modAuto && !isnan(tempSHT) && pragTempLaterale > 0.0f && pragTempVentil > 0.0f) {
+    temperaturaMedie = tempSHT;
+
+    // CONTROL LATERALE - ambele macarale
+    if ((temperaturaMedie >= pragTempLaterale) && !macara1Active && !macara2Active) {
+      deschideMacara1();
+      deschideMacara2();
+    } else if (temperaturaMedie <= (pragTempLaterale - histerezisVentil) && macara1Active && macara2Active) {
+      // Inchide Macara 1
+      inchideMacara1();
+      inchideMacara2();
+    }
+
+    // CONTROL VENTILATIE
+    if (temperaturaMedie >= pragTempVentil && !ventilPorni) {
+      startRelay(4);  // Ventilatoare ON
+      ventilPorni = true;
+      
+      #if ENABLE_SERIAL_PRINT == 1
+        Serial.println("Auto: Ventilatoare activate");
+      #endif
+    } else if (temperaturaMedie <= (pragTempVentil - histerezisVentil) && ventilPorni) {
+      stopRelay(4);   // Ventilatoare OFF
+      ventilPorni = false;
+
+      #if ENABLE_SERIAL_PRINT == 1
+        Serial.println("Auto: Ventilatoare oprite");
+      #endif
+    }
+  }
+
+
   // Debimetru
   updateFlowRate(); //se aplica din secunda in secunda
 
@@ -311,18 +372,19 @@ void loop() {
       digitalWrite(RPWM1, LOW);
       digitalWrite(LPWM1, LOW);
       macara1Active = false; // Oprire macara 1 automat
-      macara1Blocata = true;
+
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 1 oprit automat - limitator activ.");
       #endif
     } 
     // Timeout de siguranță
-    else if (millis() - macara1StartTime > 55000){
+    else if (millis() - macara1StartTime > SAFETY_TIMEOUT){
       analogWrite(RPWM1, 0);
       analogWrite(LPWM1, 0);
       macara1Active = false;
+
       #if ENABLE_SERIAL_PRINT_MACARA == 1
-        Serial.println("Macara 1 oprită - timeout 15 secunde!");
+        Serial.println("Macara 1 oprită - SAFETY timeout!");
       #endif
     }
   }
@@ -332,61 +394,18 @@ void loop() {
       analogWrite(RPWM2, 0);
       analogWrite(LPWM2, 0);
       macara2Active = false;
-      macara2Blocata = true;
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 2 oprit automat - limitator activ.");
       #endif
     }
     // Timeout de siguranță
-    else if (millis() - macara2StartTime > 55000) {
+    else if (millis() - macara2StartTime > SAFETY_TIMEOUT) {
       analogWrite(RPWM2, 0);
       analogWrite(LPWM2, 0);
       macara2Active = false;
       #if ENABLE_SERIAL_PRINT_MACARA == 1
-        Serial.println("Macara 2 oprită - timeout 15 secunde!");
+        Serial.println("Macara 2 oprită - SAFETY timeout!");
       #endif
-    }
-  }
-  
-  if (modAuto) {
-    if (!isnan(tempSHT) || !isnan(temperatura1) || !isnan(temperatura2)) {
-      temperaturaMedie = (temperatura1 + temperatura2 + tempSHT) / 3.0;
-    }
-
-    // CONTROL LATERALE - ambele macarale
-    if (temperaturaMedie >= pragTempLaterale) {
-      // Deschide Macara 1
-      if (!macara1Active && !macara1Blocata) {
-        analogWrite(RPWM1, 0);
-        analogWrite(LPWM1, 255);
-        macara1Active = true;
-        macara1StartTime = millis();
-        Serial.println("Auto: Macara 1 deschisa (temperatura mare)");
-      }
-
-      // Deschide Macara 2
-      if (!macara2Active && !macara2Blocata) {
-        analogWrite(RPWM2, 255);
-        analogWrite(LPWM2, 0);
-        macara2Active = true;
-        macara2StartTime = millis();
-        Serial.println("Auto: Macara 2 deschisa (temperatura mare)");
-      }
-    }
-
-    const float histerezisVentil = 1.0;
-
-    static bool ventilPorni = false;
-
-    // CONTROL VENTILATIE
-    if (temperaturaMedie >= pragTempVentil && !ventilPorni) {
-      startRelay(4);  // Ventilatoare ON
-      ventilPorni = true;
-      Serial.println("Auto: Ventilatoare activate");
-    } else if (temperaturaMedie <= (pragTempVentil - histerezisVentil) && ventilPorni) {
-      stopRelay(4);   // Ventilatoare OFF
-      ventilPorni = false;
-      Serial.println("Auto: Ventilatoare oprite");
     }
   }
 
