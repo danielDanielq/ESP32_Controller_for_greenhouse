@@ -77,6 +77,9 @@ unsigned long macara2StartTime = 0;
 const float histerezisVentil = 1.0;
 static bool ventilPorni = false;
 
+bool lateralDeschis = false; // devine true când ambele macarale sunt complet deschise
+bool lateralInchis = true; // devine true când ambele sunt complet închise
+
 #if ENABLE_SERIAL_PRINT_DS18B20 == 1
   void printAddress(DeviceAddress deviceAddress) {
     for (uint8_t i = 0; i < 8; i++) {
@@ -149,8 +152,9 @@ String getSensorData() {
          String(humSHT, 1) + "," +
          String(flowRateLMin, 1) + "," +
          String(umiditateSol) + "," +
-         String(luminaLux, 0)+ "," +
-         String(litriConsumati, 2);
+         String(luminaLux, 0) + "," +
+         String(litriConsumati, 2) + "," +
+         String(lateralDeschis ? 1 : 0);
 }
 
 void verificaIrigare() {
@@ -172,6 +176,8 @@ void deschideMacara1() {
   analogWrite(LPWM1, 255);
   macara1Active = true;
   macara1StartTime = millis();
+  lateralDeschis = false;
+  lateralInchis = false;
 }
 
 void inchideMacara1() {
@@ -179,6 +185,8 @@ void inchideMacara1() {
   analogWrite(LPWM1, 0);
   macara1Active = true;
   macara1StartTime = millis();
+  lateralDeschis = false;
+  lateralInchis = false;
 }
 
 void deschideMacara2() {
@@ -186,6 +194,8 @@ void deschideMacara2() {
   analogWrite(LPWM2, 0);
   macara2Active = true;
   macara2StartTime = millis();
+  lateralDeschis = false;
+  lateralInchis = false;
 }
 
 void inchideMacara2() {
@@ -193,6 +203,20 @@ void inchideMacara2() {
   analogWrite(LPWM2, 255);
   macara2Active = true;
   macara2StartTime = millis();
+  lateralDeschis = false;
+  lateralInchis = false;
+}
+
+bool isLimitatorActiv(int pin) {
+  const int debounceDelay = 10;
+  int confirmari = 0;
+  for (int i = 0; i < 5; i++) {
+    if (digitalRead(pin) == LOW) {
+      confirmari++;
+    }
+    delay(debounceDelay);
+  }
+  return confirmari >= 4; // Considerăm activ doar dacă 4 din 5 citiri au fost LOW
 }
 
 
@@ -322,12 +346,17 @@ void loop() {
   if (modAuto && !isnan(tempSHT) && pragTempLaterale > 0.0f && pragTempVentil > 0.0f) {
     temperaturaMedie = tempSHT;
 
+    bool completDeschise = (digitalRead(LIMITATOR_SUS1) == LOW && digitalRead(LIMITATOR_SUS2) == LOW);
+    bool completInchise  = (digitalRead(LIMITATOR_JOS1) == LOW && digitalRead(LIMITATOR_JOS2) == LOW);
+
+
     // CONTROL LATERALE - ambele macarale
-    if ((temperaturaMedie >= pragTempLaterale) && !macara1Active && !macara2Active) {
+    if (temperaturaMedie >= pragTempLaterale && !completDeschise && !macara1Active && !macara2Active) {
+      // Se deschid automat 
       deschideMacara1();
       deschideMacara2();
-    } else if (temperaturaMedie <= (pragTempLaterale - histerezisVentil) && macara1Active && macara2Active) {
-      // Inchide Macara 1
+    } else if (temperaturaMedie <= pragTempLaterale - histerezisVentil && !completInchise && !macara1Active && !macara2Active) {
+      // Se inchid automat 
       inchideMacara1();
       inchideMacara2();
     }
@@ -366,17 +395,31 @@ void loop() {
   
   // Verificare limitatoare pentru macarale
   if(macara1Active) {
-    if (digitalRead(LIMITATOR_SUS1) == LOW || digitalRead(LIMITATOR_JOS1) == LOW) {
+    if (isLimitatorActiv(LIMITATOR_SUS1) || isLimitatorActiv(LIMITATOR_JOS1)) {
       analogWrite(RPWM1, 0);
       analogWrite(LPWM1, 0);
-      digitalWrite(RPWM1, LOW);
-      digitalWrite(LPWM1, LOW);
-      macara1Active = false; // Oprire macara 1 automat
+      macara1Active = false; 
 
+      // Daca e complet deschis
+      if (!macara2Active && isLimitatorActiv(LIMITATOR_SUS2)){
+        lateralDeschis = true;
+        lateralInchis = false;
+      }
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 1 oprit automat - limitator activ.");
       #endif
     } 
+    else if(isLimitatorActiv(LIMITATOR_JOS1)) {
+      analogWrite(RPWM1, 0);
+      analogWrite(LPWM1, 0);
+      macara1Active = false;
+
+      // Daca e complet inchis
+      if (!macara2Active && isLimitatorActiv(LIMITATOR_JOS2)){
+        lateralInchis = true;
+        lateralDeschis = false;
+      }
+    }
     // Timeout de siguranță
     else if (millis() - macara1StartTime > SAFETY_TIMEOUT){
       analogWrite(RPWM1, 0);
@@ -386,17 +429,37 @@ void loop() {
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 1 oprită - SAFETY timeout!");
       #endif
+
+      // Resetăm starea pentru siguranță
+      lateralDeschis = false;
+      lateralInchis = false;
     }
   }
 
   if (macara2Active) {
-    if (digitalRead(LIMITATOR_SUS2) == LOW || digitalRead(LIMITATOR_JOS2) == LOW) {
+    if (isLimitatorActiv(LIMITATOR_SUS2) || isLimitatorActiv(LIMITATOR_JOS2)) {
       analogWrite(RPWM2, 0);
       analogWrite(LPWM2, 0);
       macara2Active = false;
+
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 2 oprit automat - limitator activ.");
       #endif
+
+      if (!macara1Active && isLimitatorActiv(LIMITATOR_SUS1)) {
+        lateralDeschis = true;
+        lateralInchis = false;
+      }
+    }
+    else if (isLimitatorActiv(LIMITATOR_JOS2)) {
+      analogWrite(RPWM2, 0);
+      analogWrite(LPWM2, 0);
+      macara2Active = false;
+
+      if (!macara1Active && isLimitatorActiv(LIMITATOR_JOS1)) {
+        lateralInchis = true;
+        lateralDeschis = false;
+      }
     }
     // Timeout de siguranță
     else if (millis() - macara2StartTime > SAFETY_TIMEOUT) {
@@ -406,6 +469,10 @@ void loop() {
       #if ENABLE_SERIAL_PRINT_MACARA == 1
         Serial.println("Macara 2 oprită - SAFETY timeout!");
       #endif
+
+      // Resetăm starea pentru siguranță
+      lateralDeschis = false;
+      lateralInchis = false;
     }
   }
 
