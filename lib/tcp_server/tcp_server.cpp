@@ -39,6 +39,11 @@ extern bool modAuto;
 
 extern bool irigareInDesfasurare;
 
+extern void deschideMacara1();
+extern void inchideMacara1();
+extern void deschideMacara2();
+extern void inchideMacara2();
+
 void initTCPServer() {
   WiFi.softAP(DEBUG_WIFI_SSID, DEBUG_WIFI_PASSWORD);
   tcpServer.begin();
@@ -124,41 +129,25 @@ void handleTCPClient() {
         #endif
 
       } else if (mesaj == "ON2") {
-        analogWrite(RPWM1, 0);
-        analogWrite(LPWM1, 255);
-        macara1Active = true;
-        macara1StartTime = millis();
-
+        deschideMacara1();
         #if ENABLE_SERIAL_PRINT == 1
           client.println("MACARA 1 DESCHIDERE");
         #endif
 
       } else if (mesaj == "OFF2") {
-        analogWrite(RPWM1, 255);
-        analogWrite(LPWM1, 0);
-        macara1Active = true;
-        macara1StartTime = millis();
-
+        inchideMacara1();
         #if ENABLE_SERIAL_PRINT == 1
           client.println("MACARA 1 INCHIDERE");
         #endif
 
       } else if (mesaj == "ON3") {
-        analogWrite(RPWM2, 255);
-        analogWrite(LPWM2, 0);
-        macara2Active = true;
-        macara2StartTime = millis();
-
+        deschideMacara2();
         #if ENABLE_SERIAL_PRINT == 1
           client.println("MACARA 2 DESCHIDERE");
         #endif
 
       } else if (mesaj == "OFF3") {
-        analogWrite(RPWM2, 0);
-        analogWrite(LPWM2, 255);
-        macara2Active = true;
-        macara2StartTime = millis();
-
+        inchideMacara2();
         #if ENABLE_SERIAL_PRINT == 1
           client.println("MACARA 2 INCHIDERE");
         #endif
